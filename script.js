@@ -69,7 +69,7 @@
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(async () => {
       if (!currentUser || currentUser.id !== userId || !cloudReady) return;
-      const { error } = await supabaseClient.from('estudai_data').upsert({
+      const { error } = await supabaseClient.from('pif_data').upsert({
         user_id: userId,
         data: snapshot,
         updated_at: new Date().toISOString()
@@ -124,7 +124,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
 
-    const { data: row, error } = await supabaseClient.from('estudai_data').select('data').eq('user_id', user.id).maybeSingle();
+    const { data: row, error } = await supabaseClient.from('pif_data').select('data').eq('user_id', user.id).maybeSingle();
     if (error) {
       console.error('Falha ao carregar dados do PIF:', error);
       updateStorageStatus('Verifique a tabela e as regras do banco');
@@ -138,12 +138,12 @@
       if (localHasData && !previousUserId) {
         const useLocal = window.confirm('Há matérias neste navegador e dados na sua conta. OK envia as matérias deste navegador para a nuvem; Cancelar carrega o que já está na nuvem.');
         if (useLocal) {
-          const { error: saveError } = await supabaseClient.from('estudai_data').upsert({ user_id: user.id, data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+          const { error: saveError } = await supabaseClient.from('pif_data').upsert({ user_id: user.id, data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
           if (saveError) { showToast('Não consegui enviar as matérias para a nuvem.'); loadingUserId = null; return; }
         } else data = row.data;
       } else data = row.data;
     } else {
-      const { error: saveError } = await supabaseClient.from('estudai_data').upsert({ user_id: user.id, data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      const { error: saveError } = await supabaseClient.from('pif_data').upsert({ user_id: user.id, data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
       if (saveError) { showToast('Não consegui criar seu espaço no banco. Confira as regras da tabela.'); loadingUserId = null; return; }
     }
 

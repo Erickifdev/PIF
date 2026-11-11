@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f7f4">
+  <meta name="description" content="Organize suas matérias, crie perguntas e estude no seu ritmo.">
+  <title>PIF — seu espaço de estudos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#inicio" aria-label="PIF, início"><span class="brand-mark">E.V</span><span>PIF<span class="brand-period">.</span></span></a>
+      <div class="sidebar-label">ESPAÇO DE ESTUDO</div>
+      <nav class="main-nav" aria-label="Navegação principal">
+        <button class="nav-link active" data-view="home"><span class="nav-icon">⌂</span>Visão geral</button>
+        <button class="nav-link" data-view="subjects"><span class="nav-icon">▤</span>Minhas matérias</button>
+        <button class="nav-link" data-view="practice"><span class="nav-icon">✳</span>Praticar</button>
+      </nav>
+      <div class="sidebar-section-head"><span>SUAS MATÉRIAS</span><button class="icon-button small" id="addSubjectSide" aria-label="Adicionar matéria" title="Adicionar matéria">+</button></div>
+      <div class="subject-nav" id="subjectNav"></div>
+      <div class="sidebar-bottom"><div class="sidebar-note"><span class="note-sparkle">✦</span><p>Um pouco por dia<br><strong>já faz diferença.</strong></p><span class="note-doodle">↗</span></div><div class="local-note"><span class="status-dot"></span> Seus dados ficam neste navegador</div></div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button id="menuToggle" class="icon-button menu-toggle" aria-label="Abrir menu">☰</button>
+        <div class="breadcrumbs"><span>Seu espaço</span><span class="crumb-slash">/</span><strong id="currentCrumb">Visão geral</strong></div>
+        <div class="topbar-right"><span class="today-label" id="todayLabel"></span><div class="avatar" aria-label="Seu perfil">E</div></div>
+      </header>
+
+      <section class="page active-page" id="homeView">
+        <div class="welcome-row"><div><div class="eyebrow"><span class="eyebrow-line"></span> SEU CANTINHO DE APRENDER</div><h1>Oi! Bora estudar<span class="title-dot">.</span></h1><p class="welcome-copy">Organize suas ideias, treine no seu ritmo e veja o quanto já avançou.</p></div><div class="welcome-illustration" aria-hidden="true"><div class="sun-shape"></div><div class="book-shape book-back"></div><div class="book-shape book-front"><span>abc</span><i></i></div><span class="float-star star-one">✳</span><span class="float-star star-two">✦</span></div></div>
+
+        <div class="stats-grid">
+          <article class="stat-card"><div class="stat-top"><span class="stat-icon lavender">▤</span><span class="stat-caption">NO SEU ESPAÇO</span></div><div class="stat-number" id="statSubjects">0</div><div class="stat-label">matérias criadas</div><div class="stat-foot"><span class="mini-dot lavender-dot"></span> Seu conhecimento, organizado</div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-icon peach">✳</span><span class="stat-caption">NA SUA COLEÇÃO</span></div><div class="stat-number" id="statQuestions">0</div><div class="stat-label">perguntas para praticar</div><div class="stat-foot"><span class="mini-dot peach-dot"></span> Cada pergunta conta</div></article>
+          <article class="stat-card progress-stat"><div class="stat-top"><span class="stat-icon mint">↗</span><span class="stat-caption">SEU RITMO</span></div><div class="stat-number"><span id="statPracticed">0</span><small> sessões</small></div><div class="stat-label">de prática concluídas</div><div class="progress-track"><span id="practiceProgress"></span></div></article>
+        </div>
+
+        <div class="section-heading"><div><div class="eyebrow compact">VAMOS NESSA?</div><h2>Continue de onde quiser</h2></div><button class="text-button" data-go="subjects">Ver todas <span>→</span></button></div>
+        <div class="subject-grid" id="homeSubjectGrid"></div>
+
+        <div class="bottom-grid"><section class="quick-card"><div class="quick-copy"><span class="quick-tag">MODO DE ESTUDO</span><h3>Aprender também é<br>praticar. <span>✦</span></h3><p>Escolha um assunto e teste o que já sabe. Sem pressão, no seu tempo.</p><button class="primary-button" data-go="practice">Começar a praticar <span>→</span></button></div><div class="quick-art" aria-hidden="true"><div class="art-ring"></div><div class="art-card"><span class="art-lines"></span><span class="art-check">✓</span></div><span class="art-star">✦</span></div></section><section class="tip-card"><div class="tip-icon">☼</div><div class="tip-label">LEMBRETE AMIGO</div><h3>Pequenos passos<br>também levam longe.</h3><p>Adicione uma pergunta sempre que aprender algo novo. Seu eu do futuro agradece.</p><div class="tip-scribble">com carinho, você de agora <span>↗</span></div></section></div>
+      </section>
+
+      <section class="page" id="subjectsView"><div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> SUA BIBLIOTECA</div><h1>Minhas matérias<span class="title-dot">.</span></h1><p class="welcome-copy">Tudo o que você está aprendendo, num só lugar.</p></div><button class="primary-button" id="addSubjectMain"><span>＋</span> Nova matéria</button></div><div class="subject-toolbar"><span id="subjectCountLabel">0 matérias</span><span class="toolbar-note">Escolha uma para ver os assuntos e perguntas</span></div><div class="subject-grid large-grid" id="allSubjectGrid"></div></section>
+
+      <section class="page" id="detailView"><button class="back-link" id="backToSubjects">← Todas as matérias</button><div class="detail-heading"><div class="detail-emblem" id="detailIcon">✳</div><div class="detail-title-wrap"><div class="eyebrow compact" id="detailEyebrow">SUA MATÉRIA</div><h1 id="detailTitle">Matéria</h1><p class="welcome-copy" id="detailDescription"></p></div><button class="secondary-button" id="addTopicButton">＋ Novo assunto</button></div><div id="topicList" class="topic-list"></div></section>
+
+      <section class="page" id="practiceView"><div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> SEU TREINO</div><h1>Hora de praticar<span class="title-dot">.</span></h1><p class="welcome-copy">Responda de cabeça e revele a resposta quando estiver pronto.</p></div></div><div class="practice-layout"><aside class="practice-picker"><label for="practiceSubject">MATÉRIA</label><select id="practiceSubject"><option value="">Todas as matérias</option></select><label for="practiceTopic">ASSUNTO</label><select id="practiceTopic"><option value="">Todos os assuntos</option></select><div class="picker-divider"></div><div class="picker-count"><span class="picker-count-icon">✳</span><div><strong id="practiceAvailable">0</strong><span>perguntas disponíveis</span></div></div><button class="primary-button full-button" id="startPractice">Começar sessão <span>→</span></button></aside><div class="practice-stage" id="practiceStage"><div class="empty-practice"><div class="empty-orbit"><span>✎</span></div><h2>Seu próximo passo começa aqui.</h2><p>Escolha uma matéria ou assunto e comece a praticar. As perguntas que você criar vão aparecer por aqui.</p><button class="secondary-button" data-go="subjects">Organizar minhas perguntas</button></div></div></div></section>
+      <footer class="app-footer"><span>Feito para aprender do seu jeito <span class="footer-heart">♥</span></span><span>ESTUDAÍ · SEU ESPAÇO, SEU RITMO</span></footer>
+    </main>
+  </div>
+
+  <dialog class="modal" id="subjectModal"><form method="dialog" class="modal-card" id="subjectForm"><button class="modal-close" aria-label="Fechar">×</button><span class="modal-kicker">MAIS UM PASSO SEU</span><h2>Uma matéria nova<span class="title-dot">.</span></h2><p>O que você está aprendendo?</p><label for="subjectName">Nome da matéria</label><input id="subjectName" maxlength="40" placeholder="Ex.: Química" required><label for="subjectDescription">Uma descrição curtinha <span class="optional">(opcional)</span></label><input id="subjectDescription" maxlength="90" placeholder="Ex.: Reações, elementos e experimentos"><label>Escolha um ícone</label><div class="icon-choices" id="iconChoices"></div><div class="modal-actions"><button class="secondary-button" type="button" data-close-modal>Cancelar</button><button class="primary-button" type="submit">Criar matéria <span>→</span></button></div></form></dialog>
+
+  <dialog class="modal" id="topicModal"><form method="dialog" class="modal-card" id="topicForm"><button class="modal-close" aria-label="Fechar">×</button><span class="modal-kicker">ORGANIZE SEU CONHECIMENTO</span><h2>Um assunto novo<span class="title-dot">.</span></h2><p>Qual parte da matéria você quer estudar?</p><label for="topicName">Nome do assunto</label><input id="topicName" maxlength="50" placeholder="Ex.: Ligações químicas" required><label for="topicDescription">Uma nota para lembrar <span class="optional">(opcional)</span></label><input id="topicDescription" maxlength="100" placeholder="Ex.: Íons, cátions e ânions"><div class="modal-actions"><button class="secondary-button" type="button" data-close-modal>Cancelar</button><button class="primary-button" type="submit">Criar assunto <span>→</span></button></div></form></dialog>
+
+  <dialog class="modal" id="questionModal"><form method="dialog" class="modal-card wide-modal" id="questionForm"><button class="modal-close" aria-label="Fechar">×</button><span class="modal-kicker" id="questionModalKicker">ALIMENTE SUA COLEÇÃO</span><h2>Uma pergunta nova<span class="title-dot">.</span></h2><p id="questionModalSub">Escreva uma pergunta e a resposta para praticar depois.</p><label for="questionTopic">Em qual assunto?</label><select id="questionTopic" required></select><label for="questionText">Pergunta</label><textarea id="questionText" rows="3" maxlength="500" placeholder="Ex.: O que acontece numa ligação iônica?" required></textarea><label for="answerText">Resposta</label><textarea id="answerText" rows="4" maxlength="1200" placeholder="Escreva a resposta com suas palavras..." required></textarea><div class="modal-actions"><button class="secondary-button" type="button" data-close-modal>Cancelar</button><button class="primary-button" type="submit">Salvar pergunta <span>→</span></button></div></form></dialog>
+
+  <dialog class="modal" id="bulkModal"><form method="dialog" class="modal-card wide-modal" id="bulkForm"><button class="modal-close" aria-label="Fechar">×</button><span class="modal-kicker" id="bulkModalKicker">COLAR E ORGANIZAR</span><h2>Traga suas perguntas<span class="title-dot">.</span></h2><p>Cole o texto com as perguntas e respostas. Eu separo os pares e tento identificar se são abertas ou fechadas.</p><label for="bulkText">Texto copiado</label><textarea id="bulkText" rows="8" placeholder="Pergunta: O que é fotossíntese?&#10;Resposta: É o processo em que...&#10;&#10;Pergunta: A água ferve a 100 °C?&#10;Resposta: Sim"></textarea><div class="bulk-hint">Dica: “Pergunta: … / Resposta: …” ou “Q: … / A: …” funcionam melhor. Também dá para separar pergunta e resposta em linhas, deixando uma linha em branco entre os pares. Para múltipla escolha, cole as alternativas.</div><button class="secondary-button parse-button" type="button" id="parseBulk">Separar e revisar</button><div class="bulk-preview" id="bulkPreview"></div><div class="modal-actions bulk-actions" id="bulkActions" hidden><button class="secondary-button" type="button" data-close-modal>Cancelar</button><button class="primary-button" type="submit">Salvar perguntas <span>→</span></button></div></form></dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

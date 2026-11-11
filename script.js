@@ -2,13 +2,21 @@
   const STORAGE_KEY = 'estudai.v1';
   const icons = ['📚', '🧪', '📐', '🌿', '🌎', '✍️', '🎹', '💻', '⭐'];
   const colors = [
-    { bg: '#edf0e8', fg: '#71866c' }, { bg: '#f5ece4', fg: '#b38462' },
-    { bg: '#eeebf7', fg: '#837aa8' }, { bg: '#e8f0ef', fg: '#6d8c88' },
-    { bg: '#f5edda', fg: '#ad925b' }, { bg: '#f5e9ec', fg: '#ad7b8a' }
+    { bg: '#351b24', fg: '#e28ba0' }, { bg: '#382027', fg: '#e1a0a8' },
+    { bg: '#2d1b26', fg: '#ca8bad' }, { bg: '#251d23', fg: '#ce91a2' },
+    { bg: '#3a211c', fg: '#e39b76' }, { bg: '#321a20', fg: '#df858c' }
   ];
 
   const emptyData = () => ({ subjects: [], practicedSessions: 0 });
   let data = loadData();
+  const supabaseClient = window.supabase?.createClient && window.ESTUDAI_SUPABASE?.url && window.ESTUDAI_SUPABASE?.publishableKey
+    ? window.supabase.createClient(window.ESTUDAI_SUPABASE.url, window.ESTUDAI_SUPABASE.publishableKey)
+    : null;
+  let currentUser = null;
+  let cloudReady = false;
+  let loadingUserId = null;
+  let cloudSaveTimer = null;
+  let authBusy = false;
   let currentSubjectId = null;
   let selectedIcon = icons[0];
   let session = null;
@@ -38,7 +46,7 @@
         return saved;
       }
     } catch (error) {
-      console.warn('Não foi possível ler os dados salvos do Estudaí.', error);
+      console.warn('Não foi possível ler os dados salvos do PIF.', error);
     }
     return emptyData();
   }
@@ -46,10 +54,212 @@
   function persist() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      scheduleCloudSave();
       return true;
     } catch (error) {
       showToast('Não consegui salvar. Verifique o espaço disponível no navegador.');
       return false;
+    }
+  }
+
+  function scheduleCloudSave() {
+    if (!currentUser || !cloudReady || !supabaseClient) return;
+    const userId = currentUser.id;
+    const snapshot = JSON.parse(JSON.stringify(data));
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(async () => {
+      if (!currentUser || currentUser.id !== userId || !cloudReady) return;
+      const { error } = await supabaseClient.from('estudai_data').upsert({
+        user_id: userId,
+        data: snapshot,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+      if (error) {
+        console.error('Falha ao sincronizar dados do PIF:', error);
+        showToast('Não consegui sincronizar agora. Confira sua conexão.');
+        updateStorageStatus('Falha na sincronização');
+      } else updateStorageStatus('Salvo na nuvem');
+    }, 350);
+  }
+
+  function updateStorageStatus(message) {
+    const status = byId('storageStatus');
+    if (status) status.textContent = message;
+  }
+
+  function updateAuthView() {
+    const button = byId('authButton');
+    const avatar = byId('userAvatar');
+    if (!button || !avatar) return;
+    if (currentUser) {
+      button.textContent = 'Sair';
+      avatar.textContent = (currentUser.email || 'E').slice(0, 1).toUpperCase();
+      avatar.title = currentUser.email || 'Conta conectada';
+      updateStorageStatus(cloudReady ? 'Sincronizado na nuvem' : 'Conectando à nuvem…');
+    } else {
+      button.textContent = 'Entrar';
+      avatar.textContent = 'E';
+      avatar.title = 'Seu perfil';
+      updateStorageStatus('Salvo neste navegador');
+    }
+  }
+
+  async function handleSignedInUser(user) {
+    if (!user || !supabaseClient) {
+      currentUser = null;
+      cloudReady = false;
+      updateAuthView();
+      return;
+    }
+    if (loadingUserId === user.id || (currentUser?.id === user.id && cloudReady)) return;
+    loadingUserId = user.id;
+    currentUser = user;
+    cloudReady = false;
+    updateAuthView();
+
+    const markerKey = 'estudai.lastUserId';
+    const previousUserId = localStorage.getItem(markerKey);
+    if (previousUserId && previousUserId !== user.id) {
+      data = emptyData();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    const { data: row, error } = await supabaseClient.from('estudai_data').select('data').eq('user_id', user.id).maybeSingle();
+    if (error) {
+      console.error('Falha ao carregar dados do PIF:', error);
+      updateStorageStatus('Verifique a tabela e as regras do banco');
+      showToast('A conta entrou, mas não consegui abrir o banco. Confira a configuração no Supabase.');
+      loadingUserId = null;
+      return;
+    }
+
+    const localHasData = data.subjects.length > 0 || data.practicedSessions > 0;
+    if (row?.data) {
+      if (localHasData && !previousUserId) {
+        const useLocal = window.confirm('Há matérias neste navegador e dados na sua conta. OK envia as matérias deste navegador para a nuvem; Cancelar carrega o que já está na nuvem.');
+        if (useLocal) {
+          const { error: saveError } = await supabaseClient.from('estudai_data').upsert({ user_id: user.id, data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+          if (saveError) { showToast('Não consegui enviar as matérias para a nuvem.'); loadingUserId = null; return; }
+        } else data = row.data;
+      } else data = row.data;
+    } else {
+      const { error: saveError } = await supabaseClient.from('estudai_data').upsert({ user_id: user.id, data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      if (saveError) { showToast('Não consegui criar seu espaço no banco. Confira as regras da tabela.'); loadingUserId = null; return; }
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(markerKey, user.id);
+    cloudReady = true;
+    loadingUserId = null;
+    render();
+    updateAuthView();
+    showToast('Sua conta está conectada e as matérias foram sincronizadas.');
+  }
+
+  function openAuthModal() {
+    if (!supabaseClient) { showToast('A conexão com o Supabase ainda não está configurada.'); return; }
+    authBusy = false;
+    byId('authForm').reset();
+    byId('authTitle').innerHTML = 'Entre na sua conta<span class="title-dot">.</span>';
+    byId('authDescription').textContent = 'Entre ou crie uma conta para salvar suas matérias na nuvem.';
+    byId('signInButton').innerHTML = 'Entrar <span>→</span>';
+    byId('createAccount').hidden = false;
+    openModal(byId('authModal'));
+  }
+
+  async function createAccount() {
+    if (authBusy) return;
+    const email = byId('authEmail').value.trim();
+    const password = byId('authPassword').value;
+    if (!byId('authEmail').reportValidity() || !password || password.length < 6) {
+      if (password.length < 6) { byId('authPassword').setCustomValidity('Use pelo menos 6 caracteres.'); byId('authPassword').reportValidity(); byId('authPassword').setCustomValidity(''); }
+      return;
+    }
+    authBusy = true;
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const { data: result, error } = await supabaseClient.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo } });
+    authBusy = false;
+    if (error) { showToast(error.message); return; }
+    if (result.session) closeModals();
+    else {
+      byId('authDescription').textContent = 'Conta criada! Confira seu e-mail para confirmar o cadastro e depois entre.';
+      byId('createAccount').hidden = true;
+      showToast('Confira seu e-mail para confirmar a conta.');
+    }
+  }
+
+  async function signIn() {
+    if (authBusy) return;
+    const email = byId('authEmail').value.trim();
+    const password = byId('authPassword').value;
+    if (!byId('authEmail').reportValidity() || !password) return;
+    authBusy = true;
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    authBusy = false;
+    if (error) { showToast('Não consegui entrar. Confira o e-mail e a senha.'); return; }
+    closeModals();
+  }
+
+  async function signOut() {
+    if (!supabaseClient || !currentUser) return;
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) { showToast('Não consegui sair da conta. Tente novamente.'); return; }
+    currentUser = null; cloudReady = false; session = null; data = emptyData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    currentSubjectId = null; render(); navigate('home'); updateAuthView();
+    showToast('Você saiu da conta. Seus dados continuam na nuvem.');
+  }
+
+  function initializeCloudAuth() {
+    if (!supabaseClient) { updateAuthView(); return; }
+    supabaseClient.auth.onAuthStateChange((_event, authSession) => {
+      if (authSession?.user) setTimeout(() => handleSignedInUser(authSession.user), 0);
+    });
+    supabaseClient.auth.getSession().then(({ data: result }) => {
+      if (result.session?.user) handleSignedInUser(result.session.user);
+      else updateAuthView();
+    }).catch(error => {
+      console.error('Falha ao verificar dados do PIF:', error);
+      updateAuthView();
+    });
+  }
+
+  function exportBackup() {
+    const backup = { format: 'pif-backup', version: 1, exportedAt: new Date().toISOString(), data };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `pif-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+    showToast('Cópia das suas matérias baixada.');
+  }
+
+  async function importBackup(file) {
+    if (!file) return;
+    try {
+      const backup = JSON.parse(await file.text());
+      const importedData = ['pif-backup', 'estudai-backup'].includes(backup?.format) ? backup.data : backup;
+      if (!importedData || !Array.isArray(importedData.subjects)) throw new Error('invalid backup');
+      if (data.subjects.length && !window.confirm('Importar essa cópia vai substituir as matérias que estão neste navegador. Quer continuar?')) return;
+      const previousData = data;
+      data = {
+        subjects: importedData.subjects.map(subject => ({
+          id: String(subject.id || uid()), name: String(subject.name || 'Matéria'), description: String(subject.description || ''), icon: String(subject.icon || icons[0]),
+          topics: Array.isArray(subject.topics) ? subject.topics.map(topic => ({
+            id: String(topic.id || uid()), name: String(topic.name || 'Assunto'), description: String(topic.description || ''),
+            questions: Array.isArray(topic.questions) ? topic.questions.map(question => ({ id: String(question.id || uid()), prompt: String(question.prompt || ''), answer: String(question.answer || ''), type: question.type === 'closed' ? 'closed' : 'open', options: Array.isArray(question.options) ? question.options.map(String) : [] })) : []
+          })) : []
+        })),
+        practicedSessions: Number(importedData.practicedSessions) || 0
+      };
+      if (!persist()) { data = previousData; return; }
+      currentSubjectId = null; session = null; render(); navigate('home');
+      showToast('Cópia importada. Suas matérias já estão aqui!');
+    } catch (error) {
+      showToast('Não consegui ler esse arquivo. Escolha uma cópia do PIF.');
+    } finally {
+      byId('backupFile').value = '';
     }
   }
 
@@ -468,6 +678,12 @@
   byId('bulkForm').addEventListener('submit', event => { event.preventDefault(); saveBulkQuestions(); });
 
   byId('addSubjectSide').addEventListener('click', openSubjectModal);
+  byId('exportData').addEventListener('click', exportBackup);
+  byId('importData').addEventListener('click', () => byId('backupFile').click());
+  byId('backupFile').addEventListener('change', event => importBackup(event.target.files?.[0]));
+  byId('authButton').addEventListener('click', () => currentUser ? signOut() : openAuthModal());
+  byId('authForm').addEventListener('submit', event => { event.preventDefault(); signIn(); });
+  byId('createAccount').addEventListener('click', createAccount);
   byId('addSubjectMain').addEventListener('click', openSubjectModal);
   byId('addTopicButton').addEventListener('click', openTopicModal);
   byId('backToSubjects').addEventListener('click', () => navigate('subjects'));
@@ -490,4 +706,5 @@
   const now = new Date();
   byId('todayLabel').textContent = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' }).format(now).replace('.', '');
   render();
+  initializeCloudAuth();
 })();
